@@ -1,0 +1,90 @@
+import speech_recognition as sr
+import os
+from datetime import datetime
+from pydub import AudioSegment
+
+class AudioTranscriber:
+    def _init_(self):
+
+        self.recognizer = sr.Recognizer()
+
+        self.output_dir = "transcriptions"
+        if not os.path.exists(self.output_dir):
+            os.makedirs(self.output_dir)
+    
+    def convert_to_wav(self, audio_path):
+        """Convert various audio formats to WAV"""
+        try:
+            audio = AudioSegment.from_file(audio_path)
+            
+
+            wav_path = os.path.splitext(audio_path)[0] + '_converted.wav'
+
+            audio.export(wav_path, format="wav")
+            return wav_path
+        except Exception as e:
+            print(f"Error converting file: {e}")
+            return None
+
+    def transcribe_audio(self, audio_path):
+        """Convert audio file to text"""
+        try:
+ 
+            if not os.path.exists(audio_path):
+                return f"Error: File {audio_path} not found"
+
+
+            file_ext = os.path.splitext(audio_path)[1].lower()
+
+
+            if file_ext != '.wav':
+                print(f"Converting {file_ext} file to WAV format...")
+                wav_path = self.convert_to_wav(audio_path)
+                if not wav_path:
+                    return "Error: Could not convert audio file to WAV format"
+                audio_path = wav_path
+
+            with sr.AudioFile(audio_path) as source:
+  
+                print("Processing audio file...")
+                audio = self.recognizer.record(source)
+                
+
+                print("Transcribing...")
+                text = self.recognizer.recognize_google(audio)
+                
+       
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                transcript_filename = f"{self.output_dir}/transcript_{timestamp}.txt"
+                
+                with open(transcript_filename, 'w', encoding='utf-8') as f:
+                    f.write(text)
+                
+                print(f"\nTranscription saved to: {transcript_filename}")
+                return text
+                
+        except sr.UnknownValueError:
+            return "Speech recognition could not understand the audio"
+        except sr.RequestError as e:
+            return f"Could not request results from speech recognition service; {e}"
+        except Exception as e:
+            return f"Error processing audio file: {e}"
+
+def process_directory(directory_path, transcriber):
+    """Process all audio files in a directory"""
+    supported_formats = ['.wav', '.mp3', '.m4a', '.flac', '.ogg']
+    results = {}
+    
+    for filename in os.listdir(directory_path):
+        if any(filename.lower().endswith(fmt) for fmt in supported_formats):
+            file_path = os.path.join(directory_path, filename)
+            print(f"\nProcessing: {filename}")
+            results[filename] = transcriber.transcribe_audio(file_path)
+    
+    return results
+
+
+def transcribe_file(file_path):
+    """Function to transcribe a single file"""
+    transcriber = AudioTranscriber()
+    return transcriber.transcribe_audio(file_path)
