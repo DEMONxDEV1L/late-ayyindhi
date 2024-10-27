@@ -1,0 +1,48 @@
+from docx import Document
+
+# Define basic G-code settings
+def generate_gcode(text, x_start=0, y_start=0, line_height=10):
+    gcode = ["G21 ; Set units to millimeters", "G90 ; Absolute positioning"]
+    x, y = x_start, y_start
+    
+    # Mapping each character to a simple G-code path
+    char_gcode_map = {
+        'A': "G01 X10 Y10\nG01 X5 Y15\nG01 X0 Y10\n",  # Replace with actual paths
+        'B': "G01 X10 Y10\nG01 X5 Y0\n",  # Replace with actual paths
+        # Add mappings for each character as needed
+    }
+    
+    # Loop through each line of text to generate G-code
+    for line in text.splitlines():
+        for char in line:
+            if char in char_gcode_map:
+                gcode.append(f"G0 X{x} Y{y} ; Move to start of character {char}")
+                gcode.append(char_gcode_map[char])
+                x += 10  # Move right for the next character
+            else:
+                x += 5  # Space for unknown characters
+
+        y -= line_height  # Move down for a new line
+        x = x_start  # Reset X to start position
+
+    gcode.append("G0 X0 Y0 ; Return to origin")
+    return "\n".join(gcode)
+
+# Extract text from DOCX
+def extract_text_from_docx(docx_path):
+    doc = Document(docx_path)
+    full_text = []
+    for para in doc.paragraphs:
+        full_text.append(para.text)
+    return "\n".join(full_text)
+
+# Main
+docx_path = 'path/to/your/file.docx'
+text = extract_text_from_docx(docx_path)
+gcode = generate_gcode(text)
+
+# Save to a .gcode file
+with open('output.gcode', 'w') as f:
+    f.write(gcode)
+
+print("G-code generated and saved to output.gcode")
